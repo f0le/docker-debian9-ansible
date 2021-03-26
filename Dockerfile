@@ -28,5 +28,16 @@ RUN echo "[local]\nlocalhost ansible_connection=local" > /etc/ansible/hosts
 # Make sure systemd doesn't start agettys on tty[1-6].
 RUN rm -f /lib/systemd/system/multi-user.target.wants/getty.target
 
+# Create `ansible` user with sudo permissions and membership in `DEPLOY_GROUP`
+# SUDO_GROUP in debian/ubuntu is 'sudo'
+ENV ANSIBLE_USER=ansible SUDO_GROUP=sudo DEPLOY_GROUP=deployer
+RUN set -xe \
+  && groupadd -r ${ANSIBLE_USER} \
+  && groupadd -r ${DEPLOY_GROUP} \
+  && useradd -m -g ${ANSIBLE_USER} ${ANSIBLE_USER} \
+  && usermod -aG ${SUDO_GROUP} ${ANSIBLE_USER} \
+  && usermod -aG ${DEPLOY_GROUP} ${ANSIBLE_USER} \
+  && sed -i "/^%${SUDO_GROUP}/s/ALL\$/NOPASSWD:ALL/g" /etc/sudoers
+
 VOLUME ["/sys/fs/cgroup"]
 CMD ["/lib/systemd/systemd"]
